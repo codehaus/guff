@@ -1,0 +1,245 @@
+h1. guff - Java source code generator
+
+h2. What
+
+<code>guff</code> is a ruby gem containing classes that let you produce nicely formatted Java code. Its intended to be used by code generation scripts that eliminate a lot of the ‘guff’ that often ends up being written on Java projects. 
+
+One example of this is the "http://jbuilder-guff.rubyforge.org/":java_testing_guff project, which generates java classes that provide fluent interfaces to configure mock objects. 
+
+h2. Installing
+
+<pre syntax="ruby">sudo gem install guff</pre>
+
+h2. The basics
+
+<code>guff</code> consists of classes that model a Java source file: SourceFile, Class, Constructor, Method, Field, Annotation etc. You begin by constructing a SourceFile. Then, in a series of nested method calls, you can add the class, fields, method etc. Finally you can tell the source file to save itself. All these classes live in the <code>Guff::JavaSource</code> module.
+
+h2. Generating a Java source file
+
+You begin by creating a new source file in a particular package:
+
+<pre syntax="ruby">source=Guff::JavaSource::SourceFile.new.package('guff.test')</pre>
+
+You may add some import statements if you need. Import statements can be added later in your code generation script if you do not know all your imports at this stage. Its common to learn that you need to import a particular class only deep down in the guts of your code generation script. But, if you do know you need an import or two:
+
+<pre syntax="ruby">source.import("java.util.Collections").import("some.other.Thing.*")</pre>
+
+These imported classes are just strings as far as guff is concerned. It makes no attempt to do anything smart with them like checking for their existence on the classpath or what have you. It will make sure that any given class is imported only once though.
+
+h2. Adding a new class
+
+Now that you have a source file, you can add a class to it:
+
+<pre syntax="ruby">source.begin_class('GenericClass') {|c|
+            c.genericized_using('<T extends SomethingElse>')
+            c.extends('guff.test.SuperClass')
+            c.implements('guff.test.Interface', 'java.io.Serializable')
+            c.add_javadoc("This class has a line of javadoc.").add_javadoc("With a little follow on.")
+        }</pre>
+
+h2. Adding fields to the class
+
+You can add fields to a class like this:
+
+<pre syntax="ruby">source.begin_class('SomeClass') {|c|
+            c.add_field('name',:String).static.final.initial('"Fred"')
+            c.add_field('id',:long).initial('0')
+            c.add_field('user','some.other.pkg.User').initial('new some.other.pkg.User(0,2)')
+            c.add_field('otherId',:int).package_local
+            c.add_field('c',:char).protected.add_javadoc('javadoc').add_javadoc('More javadoc!')
+            c.add_field('flag',:boolean).public.initial('false')
+        }</pre>
+
+By default fields are <code>private</code>.
+
+h2. Adding a constructor
+
+You can add constructors to a class like this:
+
+<pre syntax="ruby">source.begin_class('SomeClass') {|c|
+            c.add_constructor.taking("date","java.util.Date").taking("active","boolean").body {|body|
+                body.line("super();")
+            }
+        }</pre>
+
+You can string together as many taking clauses as you need (<code>taking</code> and <code>takes</code> are aliases by the way).
+
+h2. Defining the body of the constructor
+
+When you want to define the body of a constructor (or method), you call the <code>body</code> method on the constructor and use a single argument block to define the contents of the body. The body instance that is passed to this block supports the following methods:
+
+<pre syntax="ruby">
+    # an entire line of java code including new line
+    body.line("super();")
+
+    # append the supplied text to the current line
+    body.append("this.").append("execute()") 
+
+    # a nested block - call body again
+    body.body { |nested_body|
+        nested_body.line('System.out.println("Nested");');
+    }
+</pre>
+
+h2. Adding a method
+
+You can add methods to a class like this:
+
+<pre syntax="ruby">
+source.begin_class('SomeClass') {|c|
+            c.add_method.taking("active","boolean").returns("java.util.Date").body {|body|
+                body.line("super();")
+            }
+        }
+</pre>
+
+Which is the same as adding a constructor, except for the <code>returns</code> clause. By default methods are public and return void. The body of a method is defined in the same way as the body of a constructor (above).
+
+h2. Adding a throws clause
+
+You can add as many throws clauses as you need to methods and constructors like this:
+
+<pre syntax="ruby">
+source.begin_class('SomeClass') {|c|
+            c.add_method.throws("guff.SomeWeirdException").throws("guff.SomeOtherException").body {|body|
+                body.line("super();")
+            }
+        }
+</pre>
+
+h2. Adding annotations
+
+You can add as many annotations as you need to classes, fields, methods and constructors like this:
+
+<pre syntax="ruby">
+source.begin_class('ClassWithAnnotatedMethods') {|c|
+            c.add_annotation("javax.persistence.Entity")
+
+            m = c.add_method("getAddressID").returns(:String)
+            m.add_annotation("javax.persistence.Column") {|a|
+                a.add_property("name", '"addressID"')
+                a.add_property("table", '"EMP_DETAIL"')
+            }
+            m.add_annotation("SuppressWarnings",'"unchecked"')
+            m.body {|body|
+                body.line('return "0";')
+            }
+</pre>
+
+And you can generate complex annotations like this:
+
+<pre syntax="ruby">
+source.begin_class('ClassWithAnnotatedMethods') {|c|
+            c.add_annotation("javax.persistence.Entity")
+
+            m = c.add_method("getAddressID").returns(:String)
+            m.add_annotation("JoinTable") {|a|
+                a.add_property("name", '"CUSTOMERBEANSUBSCRIPTIONBEAN"')
+                a.add_property("joinColumns", annotation("JoinColumn"){|aa|
+                    aa.add_property("name", '"CUSTOMERBEAN_CUSTOMERID96"')
+                    aa.add_property("referencedColumnName", '"customerid"')
+                })
+                a.add_property("inverseJoinColumns", annotation("JoinColumn"){|aa|
+                    aa.add_property("name", '"SUBSCRIPTION_TITLE"')
+                    aa.add_property("referencedColumnName", '"TITLE"')
+                })
+            }
+</pre>
+
+h2. Scope and modifiers
+
+Classes, fields and methods support scoping and addition of modifiers as follows:
+
+<pre syntax="ruby">
+    method.public.abstract
+    field.private.final
+    clazz.package_local.abstract
+</pre>
+
+The supported scopes are public, protected, package_local and private. The supported modifiers are abstract, final and static
+
+h2. Adding javadoc
+
+Classes, constructors, methods and fields support javadoc as follows:
+
+<pre syntax="ruby">
+    method.add_javadoc("Line of javadoc").add_javadoc("Nudder line of javadoc")
+</pre>
+
+h2. Adding imports
+
+Source files, classes, fields, constructors and methods all support the <code>import</code> statement, but all imports will be written out in the right place when the file is saved (i.e. between the package statement and the class declaration). If you import a given class more than once, it will be imported only once in the generated java source file.
+
+h2. Saving the generated code
+
+Once you have all your fields, constructors and methods added you can save your source file as follows:
+
+<pre syntax="ruby">
+    source.save_in("../src/generated")
+</pre>
+
+
+h2. Forum
+
+"http://groups.google.com/group/guff":http://groups.google.com/group/guff
+
+TODO - create Google Group - guff
+
+h2. How to submit patches
+
+Read the "8 steps for fixing other people's code":http://drnicwilliams.com/2007/06/01/8-steps-for-fixing-other-peoples-code/ and for section "8b: Submit patch to Google Groups":http://drnicwilliams.com/2007/06/01/8-steps-for-fixing-other-peoples-code/#8b-google-groups, use the Google Group above.
+
+TODO - pick SVN or Git instructions
+
+The trunk repository is <code>svn://rubyforge.org/var/svn/guff/trunk</code> for anonymous access.
+
+OOOORRRR
+
+You can fetch the source from either:
+
+<% if rubyforge_project_id %>
+
+* rubyforge: "http://rubyforge.org/scm/?group_id=<%= rubyforge_project_id %>":http://rubyforge.org/scm/?group_id=<%= rubyforge_project_id %>
+
+<pre>git clone git://rubyforge.org/guff.git</pre>
+
+<% else %>
+
+* rubyforge: MISSING IN ACTION
+
+TODO - You can not created a RubyForge project, OR have not run <code>rubyforge config</code>
+yet to refresh your local rubyforge data with this projects' id information.
+
+When you do this, this message will magically disappear!
+
+Or you can hack website/index.txt and make it all go away!!
+
+<% end %>
+
+* github: "http://github.com/GITHUB_USERNAME/guff/tree/master":http://github.com/GITHUB_USERNAME/guff/tree/master
+
+<pre>git clone git://github.com/GITHUB_USERNAME/guff.git</pre>
+
+
+TODO - add "github_username: username" to ~/.rubyforge/user-config.yml and newgem will reuse it for future projects.
+
+
+* gitorious: "git://gitorious.org/guff/mainline.git":git://gitorious.org/guff/mainline.git
+
+<pre>git clone git://gitorious.org/guff/mainline.git</pre>
+
+h3. Build and test instructions
+
+<pre>cd guff
+rake test
+rake install_gem</pre>
+
+
+h2. License
+
+This code is free to use under the terms of the MIT license. 
+
+h2. Contact
+
+Comments are welcome. Send an email to "TODO":mailto:TODO via the "forum":http://groups.google.com/group/guff
+
