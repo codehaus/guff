@@ -1,0 +1,206 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <link rel="stylesheet" href="stylesheets/screen.css" type="text/css" media="screen" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>
+      guff &#8211; Java source code generator
+  </title>
+  <script src="javascripts/rounded_corners_lite.inc.js" type="text/javascript"></script>
+<style>
+
+</style>
+  <script type="text/javascript">
+    window.onload = function() {
+      settings = {
+          tl: { radius: 10 },
+          tr: { radius: 10 },
+          bl: { radius: 10 },
+          br: { radius: 10 },
+          antiAlias: true,
+          autoPad: true,
+          validTags: ["div"]
+      }
+      var versionBox = new curvyCorners(settings, document.getElementById("version"));
+      versionBox.applyCornersToAll();
+    }
+  </script>
+</head>
+<body>
+<div id="main">
+
+    <h1>guff &#8211; Java source code generator</h1>
+    <div class="sidebar">
+      <div id="version" class="clickable" onclick='document.location = "http://rubyforge.org/projects/guff"; return false'>
+        <p>Get Version</p>
+        <a href="http://rubyforge.org/projects/guff" class="numbers">0.5.0</a>
+      </div>
+    </div>
+    <h2>What</h2>
+<p><code>guff</code> is a ruby gem containing classes that let you produce nicely formatted Java code. Its intended to be used by code generation scripts that eliminate a lot of the ‘guff’ that often ends up being written on Java projects.</p>
+<p>One example of this is the <a href="java_testing_guff">http://jbuilder-guff.rubyforge.org/</a> project, which generates java classes that provide fluent interfaces to configure mock objects.</p>
+<h2>Installing</h2>
+<p><pre class='syntax'><span class="ident">sudo</span> <span class="ident">gem</span> <span class="ident">install</span> <span class="ident">guff</span></pre></p>
+<h2>The basics</h2>
+<p><code>guff</code> consists of classes that model a Java source file: SourceFile, Class, Constructor, Method, Field, Annotation etc. You begin by constructing a SourceFile. Then, in a series of nested method calls, you can add the class, fields, method etc. Finally you can tell the source file to save itself. All these classes live in the <code>Guff::JavaSource</code> module.</p>
+<h2>Generating a Java source file</h2>
+<p>You begin by creating a new source file in a particular package:</p>
+<p><pre class='syntax'><span class="ident">source</span><span class="punct">=</span><span class="constant">Guff</span><span class="punct">::</span><span class="constant">JavaSource</span><span class="punct">::</span><span class="constant">SourceFile</span><span class="punct">.</span><span class="ident">new</span><span class="punct">.</span><span class="ident">package</span><span class="punct">('</span><span class="string">guff.test</span><span class="punct">')</span></pre></p>
+<p>You may add some import statements if you need. Import statements can be added later in your code generation script if you do not know all your imports at this stage. Its common to learn that you need to import a particular class only deep down in the guts of your code generation script. But, if you do know you need an import or two:</p>
+<p><pre class='syntax'><span class="ident">source</span><span class="punct">.</span><span class="ident">import</span><span class="punct">(&quot;</span><span class="string">java.util.Collections</span><span class="punct">&quot;).</span><span class="ident">import</span><span class="punct">(&quot;</span><span class="string">some.other.Thing.*</span><span class="punct">&quot;)</span></pre></p>
+<p>These imported classes are just strings as far as guff is concerned. It makes no attempt to do anything smart with them like checking for their existence on the classpath or what have you. It will make sure that any given class is imported only once though.</p>
+<h2>Adding a new class</h2>
+<p>Now that you have a source file, you can add a class to it:</p>
+<p><pre class='syntax'><span class="ident">source</span><span class="punct">.</span><span class="ident">begin_class</span><span class="punct">('</span><span class="string">GenericClass</span><span class="punct">')</span> <span class="punct">{|</span><span class="ident">c</span><span class="punct">|</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">genericized_using</span><span class="punct">('</span><span class="string">&lt;T extends SomethingElse&gt;</span><span class="punct">')</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">extends</span><span class="punct">('</span><span class="string">guff.test.SuperClass</span><span class="punct">')</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">implements</span><span class="punct">('</span><span class="string">guff.test.Interface</span><span class="punct">',</span> <span class="punct">'</span><span class="string">java.io.Serializable</span><span class="punct">')</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_javadoc</span><span class="punct">(&quot;</span><span class="string">This class has a line of javadoc.</span><span class="punct">&quot;).</span><span class="ident">add_javadoc</span><span class="punct">(&quot;</span><span class="string">With a little follow on.</span><span class="punct">&quot;)</span>
+        <span class="punct">}</span></pre></p>
+<h2>Adding fields to the class</h2>
+<p>You can add fields to a class like this:</p>
+<p><pre class='syntax'><span class="ident">source</span><span class="punct">.</span><span class="ident">begin_class</span><span class="punct">('</span><span class="string">SomeClass</span><span class="punct">')</span> <span class="punct">{|</span><span class="ident">c</span><span class="punct">|</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_field</span><span class="punct">('</span><span class="string">name</span><span class="punct">',</span><span class="symbol">:String</span><span class="punct">).</span><span class="ident">static</span><span class="punct">.</span><span class="ident">final</span><span class="punct">.</span><span class="ident">initial</span><span class="punct">('</span><span class="string">&quot;Fred&quot;</span><span class="punct">')</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_field</span><span class="punct">('</span><span class="string">id</span><span class="punct">',</span><span class="symbol">:long</span><span class="punct">).</span><span class="ident">initial</span><span class="punct">('</span><span class="string">0</span><span class="punct">')</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_field</span><span class="punct">('</span><span class="string">user</span><span class="punct">','</span><span class="string">some.other.pkg.User</span><span class="punct">').</span><span class="ident">initial</span><span class="punct">('</span><span class="string">new some.other.pkg.User(0,2)</span><span class="punct">')</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_field</span><span class="punct">('</span><span class="string">otherId</span><span class="punct">',</span><span class="symbol">:int</span><span class="punct">).</span><span class="ident">package_local</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_field</span><span class="punct">('</span><span class="string">c</span><span class="punct">',</span><span class="symbol">:char</span><span class="punct">).</span><span class="ident">protected</span><span class="punct">.</span><span class="ident">add_javadoc</span><span class="punct">('</span><span class="string">javadoc</span><span class="punct">').</span><span class="ident">add_javadoc</span><span class="punct">('</span><span class="string">More javadoc!</span><span class="punct">')</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_field</span><span class="punct">('</span><span class="string">flag</span><span class="punct">',</span><span class="symbol">:boolean</span><span class="punct">).</span><span class="ident">public</span><span class="punct">.</span><span class="ident">initial</span><span class="punct">('</span><span class="string">false</span><span class="punct">')</span>
+        <span class="punct">}</span></pre></p>
+<p>By default fields are <code>private</code>.</p>
+<h2>Adding a constructor</h2>
+<p>You can add constructors to a class like this:</p>
+<p><pre class='syntax'><span class="ident">source</span><span class="punct">.</span><span class="ident">begin_class</span><span class="punct">('</span><span class="string">SomeClass</span><span class="punct">')</span> <span class="punct">{|</span><span class="ident">c</span><span class="punct">|</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_constructor</span><span class="punct">.</span><span class="ident">taking</span><span class="punct">(&quot;</span><span class="string">date</span><span class="punct">&quot;,&quot;</span><span class="string">java.util.Date</span><span class="punct">&quot;).</span><span class="ident">taking</span><span class="punct">(&quot;</span><span class="string">active</span><span class="punct">&quot;,&quot;</span><span class="string">boolean</span><span class="punct">&quot;).</span><span class="ident">body</span> <span class="punct">{|</span><span class="ident">body</span><span class="punct">|</span>
+                <span class="ident">body</span><span class="punct">.</span><span class="ident">line</span><span class="punct">(&quot;</span><span class="string">super();</span><span class="punct">&quot;)</span>
+            <span class="punct">}</span>
+        <span class="punct">}</span></pre></p>
+<p>You can string together as many taking clauses as you need (<code>taking</code> and <code>takes</code> are aliases by the way).</p>
+<h2>Defining the body of the constructor</h2>
+<p>When you want to define the body of a constructor (or method), you call the <code>body</code> method on the constructor and use a single argument block to define the contents of the body. The body instance that is passed to this block supports the following methods:</p>
+<p><pre class='syntax'>
+    <span class="comment"># an entire line of java code including new line</span>
+    <span class="ident">body</span><span class="punct">.</span><span class="ident">line</span><span class="punct">(&quot;</span><span class="string">super();</span><span class="punct">&quot;)</span>
+
+    <span class="comment"># append the supplied text to the current line</span>
+    <span class="ident">body</span><span class="punct">.</span><span class="ident">append</span><span class="punct">(&quot;</span><span class="string">this.</span><span class="punct">&quot;).</span><span class="ident">append</span><span class="punct">(&quot;</span><span class="string">execute()</span><span class="punct">&quot;)</span> 
+
+    <span class="comment"># a nested block - call body again</span>
+    <span class="ident">body</span><span class="punct">.</span><span class="ident">body</span> <span class="punct">{</span> <span class="punct">|</span><span class="ident">nested_body</span><span class="punct">|</span>
+        <span class="ident">nested_body</span><span class="punct">.</span><span class="ident">line</span><span class="punct">('</span><span class="string">System.out.println(&quot;Nested&quot;);</span><span class="punct">');</span>
+    <span class="punct">}</span>
+</pre></p>
+<h2>Adding a method</h2>
+<p>You can add methods to a class like this:</p>
+<p><pre class='syntax'>
+<span class="ident">source</span><span class="punct">.</span><span class="ident">begin_class</span><span class="punct">('</span><span class="string">SomeClass</span><span class="punct">')</span> <span class="punct">{|</span><span class="ident">c</span><span class="punct">|</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_method</span><span class="punct">.</span><span class="ident">taking</span><span class="punct">(&quot;</span><span class="string">active</span><span class="punct">&quot;,&quot;</span><span class="string">boolean</span><span class="punct">&quot;).</span><span class="ident">returns</span><span class="punct">(&quot;</span><span class="string">java.util.Date</span><span class="punct">&quot;).</span><span class="ident">body</span> <span class="punct">{|</span><span class="ident">body</span><span class="punct">|</span>
+                <span class="ident">body</span><span class="punct">.</span><span class="ident">line</span><span class="punct">(&quot;</span><span class="string">super();</span><span class="punct">&quot;)</span>
+            <span class="punct">}</span>
+        <span class="punct">}</span>
+</pre></p>
+<p>Which is the same as adding a constructor, except for the <code>returns</code> clause. By default methods are public and return void. The body of a method is defined in the same way as the body of a constructor (above).</p>
+<h2>Adding a throws clause</h2>
+<p>You can add as many throws clauses as you need to methods and constructors like this:</p>
+<p><pre class='syntax'>
+<span class="ident">source</span><span class="punct">.</span><span class="ident">begin_class</span><span class="punct">('</span><span class="string">SomeClass</span><span class="punct">')</span> <span class="punct">{|</span><span class="ident">c</span><span class="punct">|</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_method</span><span class="punct">.</span><span class="ident">throws</span><span class="punct">(&quot;</span><span class="string">guff.SomeWeirdException</span><span class="punct">&quot;).</span><span class="ident">throws</span><span class="punct">(&quot;</span><span class="string">guff.SomeOtherException</span><span class="punct">&quot;).</span><span class="ident">body</span> <span class="punct">{|</span><span class="ident">body</span><span class="punct">|</span>
+                <span class="ident">body</span><span class="punct">.</span><span class="ident">line</span><span class="punct">(&quot;</span><span class="string">super();</span><span class="punct">&quot;)</span>
+            <span class="punct">}</span>
+        <span class="punct">}</span>
+</pre></p>
+<h2>Adding annotations</h2>
+<p>You can add as many annotations as you need to classes, fields, methods and constructors like this:</p>
+<p><pre class='syntax'>
+<span class="ident">source</span><span class="punct">.</span><span class="ident">begin_class</span><span class="punct">('</span><span class="string">ClassWithAnnotatedMethods</span><span class="punct">')</span> <span class="punct">{|</span><span class="ident">c</span><span class="punct">|</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_annotation</span><span class="punct">(&quot;</span><span class="string">javax.persistence.Entity</span><span class="punct">&quot;)</span>
+
+            <span class="ident">m</span> <span class="punct">=</span> <span class="ident">c</span><span class="punct">.</span><span class="ident">add_method</span><span class="punct">(&quot;</span><span class="string">getAddressID</span><span class="punct">&quot;).</span><span class="ident">returns</span><span class="punct">(</span><span class="symbol">:String</span><span class="punct">)</span>
+            <span class="ident">m</span><span class="punct">.</span><span class="ident">add_annotation</span><span class="punct">(&quot;</span><span class="string">javax.persistence.Column</span><span class="punct">&quot;)</span> <span class="punct">{|</span><span class="ident">a</span><span class="punct">|</span>
+                <span class="ident">a</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">name</span><span class="punct">&quot;,</span> <span class="punct">'</span><span class="string">&quot;addressID&quot;</span><span class="punct">')</span>
+                <span class="ident">a</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">table</span><span class="punct">&quot;,</span> <span class="punct">'</span><span class="string">&quot;EMP_DETAIL&quot;</span><span class="punct">')</span>
+            <span class="punct">}</span>
+            <span class="ident">m</span><span class="punct">.</span><span class="ident">add_annotation</span><span class="punct">(&quot;</span><span class="string">SuppressWarnings</span><span class="punct">&quot;,'</span><span class="string">&quot;unchecked&quot;</span><span class="punct">')</span>
+            <span class="ident">m</span><span class="punct">.</span><span class="ident">body</span> <span class="punct">{|</span><span class="ident">body</span><span class="punct">|</span>
+                <span class="ident">body</span><span class="punct">.</span><span class="ident">line</span><span class="punct">('</span><span class="string">return &quot;0&quot;;</span><span class="punct">')</span>
+            <span class="punct">}</span>
+</pre></p>
+<p>And you can generate complex annotations like this:</p>
+<p><pre class='syntax'>
+<span class="ident">source</span><span class="punct">.</span><span class="ident">begin_class</span><span class="punct">('</span><span class="string">ClassWithAnnotatedMethods</span><span class="punct">')</span> <span class="punct">{|</span><span class="ident">c</span><span class="punct">|</span>
+            <span class="ident">c</span><span class="punct">.</span><span class="ident">add_annotation</span><span class="punct">(&quot;</span><span class="string">javax.persistence.Entity</span><span class="punct">&quot;)</span>
+
+            <span class="ident">m</span> <span class="punct">=</span> <span class="ident">c</span><span class="punct">.</span><span class="ident">add_method</span><span class="punct">(&quot;</span><span class="string">getAddressID</span><span class="punct">&quot;).</span><span class="ident">returns</span><span class="punct">(</span><span class="symbol">:String</span><span class="punct">)</span>
+            <span class="ident">m</span><span class="punct">.</span><span class="ident">add_annotation</span><span class="punct">(&quot;</span><span class="string">JoinTable</span><span class="punct">&quot;)</span> <span class="punct">{|</span><span class="ident">a</span><span class="punct">|</span>
+                <span class="ident">a</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">name</span><span class="punct">&quot;,</span> <span class="punct">'</span><span class="string">&quot;CUSTOMERBEANSUBSCRIPTIONBEAN&quot;</span><span class="punct">')</span>
+                <span class="ident">a</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">joinColumns</span><span class="punct">&quot;,</span> <span class="ident">annotation</span><span class="punct">(&quot;</span><span class="string">JoinColumn</span><span class="punct">&quot;){|</span><span class="ident">aa</span><span class="punct">|</span>
+                    <span class="ident">aa</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">name</span><span class="punct">&quot;,</span> <span class="punct">'</span><span class="string">&quot;CUSTOMERBEAN_CUSTOMERID96&quot;</span><span class="punct">')</span>
+                    <span class="ident">aa</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">referencedColumnName</span><span class="punct">&quot;,</span> <span class="punct">'</span><span class="string">&quot;customerid&quot;</span><span class="punct">')</span>
+                <span class="punct">})</span>
+                <span class="ident">a</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">inverseJoinColumns</span><span class="punct">&quot;,</span> <span class="ident">annotation</span><span class="punct">(&quot;</span><span class="string">JoinColumn</span><span class="punct">&quot;){|</span><span class="ident">aa</span><span class="punct">|</span>
+                    <span class="ident">aa</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">name</span><span class="punct">&quot;,</span> <span class="punct">'</span><span class="string">&quot;SUBSCRIPTION_TITLE&quot;</span><span class="punct">')</span>
+                    <span class="ident">aa</span><span class="punct">.</span><span class="ident">add_property</span><span class="punct">(&quot;</span><span class="string">referencedColumnName</span><span class="punct">&quot;,</span> <span class="punct">'</span><span class="string">&quot;TITLE&quot;</span><span class="punct">')</span>
+                <span class="punct">})</span>
+            <span class="punct">}</span>
+</pre></p>
+<h2>Scope and modifiers</h2>
+<p>Classes, fields and methods support scoping and addition of modifiers as follows:</p>
+<p><pre class='syntax'>
+    <span class="ident">method</span><span class="punct">.</span><span class="ident">public</span><span class="punct">.</span><span class="ident">abstract</span>
+    <span class="ident">field</span><span class="punct">.</span><span class="ident">private</span><span class="punct">.</span><span class="ident">final</span>
+    <span class="ident">clazz</span><span class="punct">.</span><span class="ident">package_local</span><span class="punct">.</span><span class="ident">abstract</span>
+</pre></p>
+<p>The supported scopes are public, protected, package_local and private. The supported modifiers are abstract, final and static</p>
+<h2>Adding javadoc</h2>
+<p>Classes, constructors, methods and fields support javadoc as follows:</p>
+<p><pre class='syntax'>
+    <span class="ident">method</span><span class="punct">.</span><span class="ident">add_javadoc</span><span class="punct">(&quot;</span><span class="string">Line of javadoc</span><span class="punct">&quot;).</span><span class="ident">add_javadoc</span><span class="punct">(&quot;</span><span class="string">Nudder line of javadoc</span><span class="punct">&quot;)</span>
+</pre></p>
+<h2>Adding imports</h2>
+<p>Source files, classes, fields, constructors and methods all support the <code>import</code> statement, but all imports will be written out in the right place when the file is saved (i.e. between the package statement and the class declaration). If you import a given class more than once, it will be imported only once in the generated java source file.</p>
+<h2>Saving the generated code</h2>
+<p>Once you have all your fields, constructors and methods added you can save your source file as follows:</p>
+<p><pre class='syntax'>
+    <span class="ident">source</span><span class="punct">.</span><span class="ident">save_in</span><span class="punct">(&quot;</span><span class="string">../src/generated</span><span class="punct">&quot;)</span>
+</pre></p>
+<h2>Forum</h2>
+<p><a href="http://groups.google.com/group/guff">http://groups.google.com/group/guff</a></p>
+<p><span class="caps">TODO</span> &#8211; create Google Group &#8211; guff</p>
+<h2>How to submit patches</h2>
+<p>Read the <a href="http://drnicwilliams.com/2007/06/01/8-steps-for-fixing-other-peoples-code/">8 steps for fixing other people&#8217;s code</a> and for section <a href="http://drnicwilliams.com/2007/06/01/8-steps-for-fixing-other-peoples-code/#8b-google-groups">8b: Submit patch to Google Groups</a>, use the Google Group above.</p>
+<p><span class="caps">TODO</span> &#8211; pick <span class="caps">SVN</span> or Git instructions</p>
+<p>The trunk repository is <code>svn://rubyforge.org/var/svn/guff/trunk</code> for anonymous access.</p>
+<p><span class="caps">OOOORRRR</span></p>
+<p>You can fetch the source from either:</p>
+<ul>
+	<li>rubyforge: <a href="http://rubyforge.org/scm/?group_id=2740">http://rubyforge.org/scm/?group_id=2740</a></li>
+</ul>
+<pre>git clone git://rubyforge.org/guff.git</pre>
+<ul>
+	<li>github: <a href="http://github.com/GITHUB_USERNAME/guff/tree/master">http://github.com/GITHUB_USERNAME/guff/tree/master</a></li>
+</ul>
+<pre>git clone git://github.com/GITHUB_USERNAME/guff.git</pre>
+<p><span class="caps">TODO</span> &#8211; add &#8220;github_username: username&#8221; to ~/.rubyforge/user-config.yml and newgem will reuse it for future projects.</p>
+<ul>
+	<li>gitorious: <a href="git://gitorious.org/guff/mainline.git">git://gitorious.org/guff/mainline.git</a></li>
+</ul>
+<pre>git clone git://gitorious.org/guff/mainline.git</pre>
+<h3>Build and test instructions</h3>
+<pre>cd guff
+rake test
+rake install_gem</pre>
+<h2>License</h2>
+<p>This code is free to use under the terms of the <span class="caps">MIT</span> license.</p>
+<h2>Contact</h2>
+<p>Comments are welcome. Send an email to <a href="mailto:TODO"><span class="caps">TODO</span></a> via the <a href="http://groups.google.com/group/guff">forum</a></p>
+    <p class="coda">
+      <a href="TODO">TODO</a>, 4th November 2008<br>
+      Theme extended from <a href="http://rb2js.rubyforge.org/">Paul Battley</a>
+    </p>
+</div>
+
+<!-- insert site tracking codes here, like Google Urchin -->
+
+</body>
+</html>
